@@ -53,6 +53,11 @@ export const insertProductSchema = createInsertSchema(products).pick({
   price: true,
   quantity: true,
   lowStockAlert: true,
+}).extend({
+  // Override the types to match what we expect from the form
+  price: z.string().transform(val => parseFloat(val)),
+  quantity: z.number(),
+  lowStockAlert: z.number()
 });
 
 // Schema for inserting orders
