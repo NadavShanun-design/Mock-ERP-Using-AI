@@ -27,7 +27,7 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
       name: "",
       sku: "",
       description: "",
-      price: "",
+      price: "0",
       quantity: 0,
       lowStockAlert: 10,
     },
@@ -35,7 +35,14 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
 
   const createProduct = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/products", data);
+      // Convert string values to numbers for numeric fields
+      const formattedData = {
+        ...data,
+        price: parseFloat(data.price),
+        quantity: parseInt(data.quantity),
+        lowStockAlert: parseInt(data.lowStockAlert)
+      };
+      const res = await apiRequest("POST", "/api/products", formattedData);
       return res.json();
     },
     onSuccess: () => {
@@ -114,7 +121,12 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
                 <FormItem>
                   <FormLabel>Price</FormLabel>
                   <FormControl>
-                    <Input type="number" step="0.01" {...field} />
+                    <Input 
+                      type="number" 
+                      step="0.01" 
+                      onChange={(e) => field.onChange(e.target.value)}
+                      value={field.value}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -127,7 +139,11 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
                 <FormItem>
                   <FormLabel>Quantity</FormLabel>
                   <FormControl>
-                    <Input type="number" {...field} />
+                    <Input 
+                      type="number" 
+                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                      value={field.value}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -140,7 +156,11 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
                 <FormItem>
                   <FormLabel>Low Stock Alert Threshold</FormLabel>
                   <FormControl>
-                    <Input type="number" {...field} />
+                    <Input 
+                      type="number" 
+                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                      value={field.value}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
