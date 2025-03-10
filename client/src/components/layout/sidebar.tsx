@@ -89,7 +89,7 @@ export default function Sidebar() {
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex h-screen w-64 flex-col border-r bg-card">
         <div className="p-6">
-          <h1 className="text-2xl font-bold">ERP System</h1>
+          <h1 className="text-2xl font-bold">Shanun ERP</h1>
         </div>
         <div className="flex-1 px-4">
           <NavContent />

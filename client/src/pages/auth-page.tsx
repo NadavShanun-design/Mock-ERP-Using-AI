@@ -30,7 +30,7 @@ export default function AuthPage() {
       <div className="flex-1 flex items-center justify-center">
         <Card className="w-[400px]">
           <CardHeader>
-            <CardTitle>Welcome to ERP System</CardTitle>
+            <CardTitle>Welcome to Shanun ERP</CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login">
