@@ -31,20 +31,26 @@ export default function Inventory() {
     product.description?.toLowerCase().includes(search.toLowerCase())
   );
 
-  function getProductStock(productId: number) {
+  function getLocationStock(productId: number, locationId: number) {
+    return inventory?.find(inv => 
+      inv.productId === productId && inv.locationId === locationId
+    )?.quantity ?? 0;
+  }
+
+  function getTotalStock(productId: number) {
     return inventory
       ?.filter(inv => inv.productId === productId)
-      .reduce((sum, inv) => sum + (inv.quantity - (inv.reservedQuantity || 0)), 0) ?? 0;
+      .reduce((sum, inv) => sum + inv.quantity, 0) ?? 0;
   }
 
   function getStockStatus(product: Product) {
-    const totalStock = getProductStock(product.id);
+    const totalStock = getTotalStock(product.id);
     const reorderPoint = product.reorderPoint || 10;
 
     if (totalStock <= 0) {
       return <Badge variant="destructive">Out of Stock</Badge>;
     } else if (totalStock <= reorderPoint) {
-      return <Badge variant="warning" className="bg-yellow-500/10 text-yellow-500">Low Stock</Badge>;
+      return <Badge variant="warning">Low Stock</Badge>;
     } else {
       return <Badge variant="default" className="bg-green-500/10 text-green-500">In Stock</Badge>;
     }
@@ -98,31 +104,38 @@ export default function Inventory() {
                       <TableHead>SKU</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead>Price</TableHead>
-                      <TableHead>Available Stock</TableHead>
+                      <TableHead>Total Stock</TableHead>
+                      <TableHead>Stock by Location</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredProducts?.map((product) => {
-                      const totalStock = getProductStock(product.id);
-                      return (
-                        <TableRow key={product.id}>
-                          <TableCell className="font-medium">{product.name}</TableCell>
-                          <TableCell>{product.sku}</TableCell>
-                          <TableCell className="max-w-xs truncate">{product.description}</TableCell>
-                          <TableCell>${Number(product.price).toFixed(2)}</TableCell>
-                          <TableCell>{totalStock}</TableCell>
-                          <TableCell>{getStockStatus(product)}</TableCell>
-                          <TableCell>
-                            <InventoryTransfer product={product} />
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                    {filteredProducts?.map((product) => (
+                      <TableRow key={product.id}>
+                        <TableCell className="font-medium">{product.name}</TableCell>
+                        <TableCell>{product.sku}</TableCell>
+                        <TableCell className="max-w-xs truncate">{product.description}</TableCell>
+                        <TableCell>${Number(product.price).toFixed(2)}</TableCell>
+                        <TableCell>{getTotalStock(product.id)}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            {locations?.map(location => (
+                              <div key={location.id} className="text-sm">
+                                {location.name}: {getLocationStock(product.id, location.id)}
+                              </div>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell>{getStockStatus(product)}</TableCell>
+                        <TableCell>
+                          <InventoryTransfer product={product} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
                     {filteredProducts?.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground">
+                        <TableCell colSpan={8} className="text-center text-muted-foreground">
                           No products found
                         </TableCell>
                       </TableRow>
