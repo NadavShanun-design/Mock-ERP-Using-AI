@@ -49,8 +49,9 @@ export const inventoryMovements = pgTable("inventory_movements", {
   toLocationId: integer("to_location_id"),
   quantity: integer("quantity").notNull(),
   type: text("type").notNull(), // transfer, adjustment, receipt, shipment
-  reference: text("reference"), // PO number, SO number, etc.
+  reference: text("reference"), // PO number, SO number, batch number
   reason: text("reason"),
+  expiryDate: timestamp("expiry_date"),
   timestamp: timestamp("timestamp").defaultNow(),
   userId: integer("user_id").notNull(),
 });

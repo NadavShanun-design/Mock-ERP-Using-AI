@@ -30,11 +30,25 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertInventoryMovementSchema, Product, Location } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ArrowRightLeft, Loader2 } from "lucide-react";
+import { z } from "zod";
 
 interface TransferFormProps {
   onSuccess?: () => void;
   product?: Product;
 }
+
+// Define the transfer form schema
+const transferFormSchema = z.object({
+  productId: z.number(),
+  fromLocationId: z.number(),
+  toLocationId: z.number(),
+  quantity: z.number().min(1, "Quantity must be at least 1"),
+  type: z.string(),
+  reference: z.string().optional(),
+  expiryDate: z.string().optional(),
+});
+
+type TransferFormValues = z.infer<typeof transferFormSchema>;
 
 export function InventoryTransfer({ onSuccess, product }: TransferFormProps) {
   const [open, setOpen] = useState(false);
@@ -44,34 +58,25 @@ export function InventoryTransfer({ onSuccess, product }: TransferFormProps) {
     queryKey: ["/api/locations"],
   });
 
-  const form = useForm({
-    resolver: zodResolver(
-      insertInventoryMovementSchema.extend({
-        batchNumber: insertInventoryMovementSchema.shape.reference,
-        expiryDate: insertInventoryMovementSchema.shape.timestamp.optional(),
-      })
-    ),
+  const form = useForm<TransferFormValues>({
+    resolver: zodResolver(transferFormSchema),
     defaultValues: {
       productId: product?.id,
-      quantity: 0,
+      quantity: 1,
       type: "transfer",
-      batchNumber: "",
       fromLocationId: undefined,
       toLocationId: undefined,
     },
   });
 
   const transferInventory = useMutation({
-    mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/inventory/transfer", {
-        ...data,
-        reference: data.batchNumber,
-      });
+    mutationFn: async (data: TransferFormValues) => {
+      const res = await apiRequest("POST", "/api/inventory/transfer", data);
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/locations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       toast({
         title: "Success",
         description: "Inventory transferred successfully",
@@ -99,7 +104,7 @@ export function InventoryTransfer({ onSuccess, product }: TransferFormProps) {
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Transfer Inventory</DialogTitle>
+          <DialogTitle>Transfer Inventory for {product?.name}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form
@@ -176,7 +181,7 @@ export function InventoryTransfer({ onSuccess, product }: TransferFormProps) {
                     <Input
                       type="number"
                       min="1"
-                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                      onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
                       value={field.value}
                     />
                   </FormControl>
@@ -186,12 +191,12 @@ export function InventoryTransfer({ onSuccess, product }: TransferFormProps) {
             />
             <FormField
               control={form.control}
-              name="batchNumber"
+              name="reference"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Batch Number</FormLabel>
+                  <FormLabel>Batch/Reference Number (Optional)</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} placeholder="Enter batch or reference number" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -202,7 +207,7 @@ export function InventoryTransfer({ onSuccess, product }: TransferFormProps) {
               name="expiryDate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Expiry Date</FormLabel>
+                  <FormLabel>Expiry Date (Optional)</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>
