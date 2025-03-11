@@ -27,22 +27,21 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
       name: "",
       sku: "",
       description: "",
-      price: "0",
+      price: "",
       quantity: 0,
-      lowStockAlert: 10,
+      reorderPoint: 10,
+      minimumStock: 5,
+      maximumStock: 100,
+      unit: "piece",
+      category: "",
+      brand: "",
+      dimensions: {}
     },
   });
 
   const createProduct = useMutation({
     mutationFn: async (data: any) => {
-      // Convert string values to numbers for numeric fields
-      const formattedData = {
-        ...data,
-        price: parseFloat(data.price),
-        quantity: parseInt(data.quantity),
-        lowStockAlert: parseInt(data.lowStockAlert)
-      };
-      const res = await apiRequest("POST", "/api/products", formattedData);
+      const res = await apiRequest("POST", "/api/products", data);
       return res.json();
     },
     onSuccess: () => {
@@ -124,8 +123,7 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
                     <Input 
                       type="number" 
                       step="0.01" 
-                      onChange={(e) => field.onChange(e.target.value)}
-                      value={field.value}
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -137,12 +135,12 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
               name="quantity"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Quantity</FormLabel>
+                  <FormLabel>Initial Quantity</FormLabel>
                   <FormControl>
                     <Input 
-                      type="number" 
-                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                      value={field.value}
+                      type="number"
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value === '' ? 0 : parseInt(e.target.value))}
                     />
                   </FormControl>
                   <FormMessage />
@@ -151,16 +149,42 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
             />
             <FormField
               control={form.control}
-              name="lowStockAlert"
+              name="reorderPoint"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Low Stock Alert Threshold</FormLabel>
+                  <FormLabel>Reorder Point</FormLabel>
                   <FormControl>
                     <Input 
-                      type="number" 
-                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                      value={field.value}
+                      type="number"
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value === '' ? 0 : parseInt(e.target.value))}
                     />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="brand"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Brand</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -88,7 +88,7 @@ export class MemStorage implements IStorage {
     };
     this.products.set(id, newProduct);
 
-    // Initialize inventory in default location
+    // Initialize inventory in default location with the specified quantity
     const defaultLocation = Array.from(this.locations.values())[0];
     if (defaultLocation) {
       await this.createProductInventory({
