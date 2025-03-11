@@ -31,14 +31,19 @@ export default function Inventory() {
     product.description?.toLowerCase().includes(search.toLowerCase())
   );
 
+  function getProductStock(productId: number) {
+    return inventory
+      ?.filter(inv => inv.productId === productId)
+      .reduce((sum, inv) => sum + (inv.quantity - (inv.reservedQuantity || 0)), 0) ?? 0;
+  }
+
   function getStockStatus(product: Product) {
-    const totalStock = inventory
-      ?.filter(inv => inv.productId === product.id)
-      .reduce((sum, inv) => sum + inv.quantity, 0) ?? 0;
+    const totalStock = getProductStock(product.id);
+    const reorderPoint = product.reorderPoint || 10;
 
     if (totalStock <= 0) {
       return <Badge variant="destructive">Out of Stock</Badge>;
-    } else if (totalStock <= product.reorderPoint) {
+    } else if (totalStock <= reorderPoint) {
       return <Badge variant="warning" className="bg-yellow-500/10 text-yellow-500">Low Stock</Badge>;
     } else {
       return <Badge variant="default" className="bg-green-500/10 text-green-500">In Stock</Badge>;
@@ -93,29 +98,28 @@ export default function Inventory() {
                       <TableHead>SKU</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead>Price</TableHead>
-                      <TableHead>Total Stock</TableHead>
+                      <TableHead>Available Stock</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredProducts?.map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell className="font-medium">{product.name}</TableCell>
-                        <TableCell>{product.sku}</TableCell>
-                        <TableCell className="max-w-xs truncate">{product.description}</TableCell>
-                        <TableCell>${Number(product.price).toFixed(2)}</TableCell>
-                        <TableCell>
-                          {inventory
-                            ?.filter(inv => inv.productId === product.id)
-                            .reduce((sum, inv) => sum + inv.quantity, 0) ?? 0}
-                        </TableCell>
-                        <TableCell>{getStockStatus(product)}</TableCell>
-                        <TableCell>
-                          <InventoryTransfer product={product} />
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {filteredProducts?.map((product) => {
+                      const totalStock = getProductStock(product.id);
+                      return (
+                        <TableRow key={product.id}>
+                          <TableCell className="font-medium">{product.name}</TableCell>
+                          <TableCell>{product.sku}</TableCell>
+                          <TableCell className="max-w-xs truncate">{product.description}</TableCell>
+                          <TableCell>${Number(product.price).toFixed(2)}</TableCell>
+                          <TableCell>{totalStock}</TableCell>
+                          <TableCell>{getStockStatus(product)}</TableCell>
+                          <TableCell>
+                            <InventoryTransfer product={product} />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                     {filteredProducts?.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center text-muted-foreground">
