@@ -53,6 +53,8 @@ export class MemStorage implements IStorage {
       ...product,
       id,
       price: product.price.toString(),
+      quantity: Number(product.quantity),
+      lowStockAlert: Number(product.lowStockAlert),
       description: product.description || null
     };
     this.products.set(id, newProduct);
