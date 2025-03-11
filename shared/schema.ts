@@ -76,11 +76,19 @@ export const insertProductInventorySchema = createInsertSchema(productInventory,
   ),
 }).omit({ lastUpdated: true });
 
-export const insertInventoryMovementSchema = createInsertSchema(inventoryMovements, {
-  quantity: z.number().or(z.string()).transform(val =>
-    typeof val === 'string' ? parseInt(val) : val
-  ),
-}).omit({ timestamp: true });
+export const insertInventoryMovementSchema = createInsertSchema(inventoryMovements).extend({
+  productId: z.number(),
+  fromLocationId: z.number().optional(),
+  toLocationId: z.number().optional(),
+  quantity: z.number().min(1, "Quantity must be at least 1"),
+  type: z.string(),
+  reference: z.string().optional(),
+  expiryDate: z.string().optional(),
+  userId: z.number().optional() // This will be set by the server
+}).omit({ 
+  id: true,
+  timestamp: true 
+});
 
 // User schema
 export const users = pgTable("users", {

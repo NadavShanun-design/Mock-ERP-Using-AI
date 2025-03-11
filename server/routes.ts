@@ -58,10 +58,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/inventory/transfer", async (req, res) => {
-    const movement = insertInventoryMovementSchema.parse(req.body);
-    if (!req.user) return res.status(401).send("Unauthorized");
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
     try {
+      const movement = insertInventoryMovementSchema.parse({
+        ...req.body,
+        userId: req.user.id
+      });
+
+      // Validate the transfer
+      if (!movement.fromLocationId && !movement.toLocationId) {
+        return res.status(400).json({ message: "Must specify at least one location" });
+      }
+
       // Handle inventory decrease at source location
       if (movement.fromLocationId) {
         await storage.updateProductInventory(
@@ -86,7 +97,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(200).json({ message: "Inventory transferred successfully" });
     } catch (error) {
-      res.status(400).json({ message: (error as Error).message });
+      console.error("Transfer error:", error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : "Failed to transfer inventory" 
+      });
     }
   });
 

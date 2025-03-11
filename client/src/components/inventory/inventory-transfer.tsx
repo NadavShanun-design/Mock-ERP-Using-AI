@@ -37,19 +37,6 @@ interface TransferFormProps {
   product?: Product;
 }
 
-// Define the transfer form schema
-const transferFormSchema = z.object({
-  productId: z.number(),
-  fromLocationId: z.number(),
-  toLocationId: z.number(),
-  quantity: z.number().min(1, "Quantity must be at least 1"),
-  type: z.string(),
-  reference: z.string().optional(),
-  expiryDate: z.string().optional(),
-});
-
-type TransferFormValues = z.infer<typeof transferFormSchema>;
-
 export function InventoryTransfer({ onSuccess, product }: TransferFormProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
@@ -58,20 +45,30 @@ export function InventoryTransfer({ onSuccess, product }: TransferFormProps) {
     queryKey: ["/api/locations"],
   });
 
-  const form = useForm<TransferFormValues>({
-    resolver: zodResolver(transferFormSchema),
+  const form = useForm({
+    resolver: zodResolver(insertInventoryMovementSchema),
     defaultValues: {
       productId: product?.id,
       quantity: 1,
       type: "transfer",
+      reference: "",
+      expiryDate: undefined,
       fromLocationId: undefined,
       toLocationId: undefined,
     },
   });
 
   const transferInventory = useMutation({
-    mutationFn: async (data: TransferFormValues) => {
+    mutationFn: async (data: z.infer<typeof insertInventoryMovementSchema>) => {
+      if (!data.fromLocationId && !data.toLocationId) {
+        throw new Error("Please select at least one location");
+      }
+
       const res = await apiRequest("POST", "/api/inventory/transfer", data);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to transfer inventory");
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -119,7 +116,7 @@ export function InventoryTransfer({ onSuccess, product }: TransferFormProps) {
                   <FormLabel>From Location</FormLabel>
                   <Select
                     onValueChange={(value) => field.onChange(parseInt(value))}
-                    defaultValue={field.value?.toString()}
+                    value={field.value?.toString()}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -149,7 +146,7 @@ export function InventoryTransfer({ onSuccess, product }: TransferFormProps) {
                   <FormLabel>To Location</FormLabel>
                   <Select
                     onValueChange={(value) => field.onChange(parseInt(value))}
-                    defaultValue={field.value?.toString()}
+                    value={field.value?.toString()}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -194,9 +191,9 @@ export function InventoryTransfer({ onSuccess, product }: TransferFormProps) {
               name="reference"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Batch/Reference Number (Optional)</FormLabel>
+                  <FormLabel>Reference Number (Optional)</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Enter batch or reference number" />
+                    <Input {...field} placeholder="Enter reference number" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
