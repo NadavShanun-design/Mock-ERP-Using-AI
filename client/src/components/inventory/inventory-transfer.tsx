@@ -75,6 +75,7 @@ export function InventoryTransfer({ onSuccess, product }: TransferFormProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({
         title: "Success",
         description: "Inventory transferred successfully",

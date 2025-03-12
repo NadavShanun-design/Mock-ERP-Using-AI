@@ -59,6 +59,7 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({
         title: "Success",
         description: "Product created successfully",
@@ -180,7 +181,7 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
                 <FormItem>
                   <FormLabel>Reorder Point</FormLabel>
                   <FormControl>
-                    <Input 
+                    <Input
                       type="number"
                       min="0"
                       {...field}

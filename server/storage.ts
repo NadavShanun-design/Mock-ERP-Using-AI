@@ -218,30 +218,67 @@ export class MemStorage {
     const inventory = await this.getAllInventory();
 
     let totalValue = 0;
-    const lowStockProducts = new Set<number>();
-    const expiringProducts = new Set<number>();
+    let lowStockProducts = 0;
+    let expiringProducts = 0;
 
+    // Create a map for quick product lookups
+    const productMap = new Map(products.map(p => [p.id, p]));
+
+    // Create a map to aggregate inventory by product
+    const productInventoryMap = new Map<number, {
+      totalQuantity: number;
+      hasExpired: boolean;
+      isLowStock: boolean;
+    }>();
+
+    // Process all inventory records
     for (const inv of inventory) {
-      const product = this.products.get(inv.productId);
-      if (product) {
-        const availableQuantity = inv.quantity - (inv.reservedQuantity || 0);
-        totalValue += Number(product.price) * availableQuantity;
+      const product = productMap.get(inv.productId);
+      if (!product) continue;
 
-        if (availableQuantity <= (product.reorderPoint || 10)) {
-          lowStockProducts.add(product.id);
-        }
-
-        if (inv.expiryDate && new Date(inv.expiryDate) <= new Date()) {
-          expiringProducts.add(product.id);
-        }
+      const availableQuantity = inv.quantity - (inv.reservedQuantity || 0);
+      const price = Number(product.price);
+      if (!isNaN(price)) {
+        totalValue += price * availableQuantity;
       }
+
+      // Get or initialize product inventory stats
+      let productStats = productInventoryMap.get(inv.productId);
+      if (!productStats) {
+        productStats = {
+          totalQuantity: 0,
+          hasExpired: false,
+          isLowStock: false
+        };
+        productInventoryMap.set(inv.productId, productStats);
+      }
+
+      // Update product stats
+      productStats.totalQuantity += availableQuantity;
+
+      // Check expiry
+      if (inv.expiryDate && new Date(inv.expiryDate) <= new Date()) {
+        productStats.hasExpired = true;
+      }
+
+      // Check low stock against reorder point
+      const reorderPoint = product.reorderPoint || 10;
+      if (productStats.totalQuantity <= reorderPoint) {
+        productStats.isLowStock = true;
+      }
+    }
+
+    // Count products with issues
+    for (const stats of productInventoryMap.values()) {
+      if (stats.isLowStock) lowStockProducts++;
+      if (stats.hasExpired) expiringProducts++;
     }
 
     return {
       totalProducts: products.length,
-      lowStockProducts: lowStockProducts.size,
-      expiringProducts: expiringProducts.size,
-      totalInventoryValue: totalValue,
+      lowStockProducts,
+      expiringProducts,
+      totalInventoryValue: Number(totalValue.toFixed(2)),
     };
   }
 }
