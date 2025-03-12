@@ -43,8 +43,8 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
       // Format data for API
       const formattedData = {
         ...data,
-        quantity: Number(data.quantity) || 0,
-        price: Number(data.price)
+        quantity: Math.max(0, Number(data.quantity) || 0), // Ensure non-negative number
+        price: Number(data.price) || 0
       };
 
       const res = await apiRequest("POST", "/api/products", formattedData);
@@ -135,11 +135,14 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
                   <FormLabel>Price</FormLabel>
                   <FormControl>
                     <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
                       {...field}
-                      onChange={(e) => field.onChange(e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^\d.]/g, '');
+                        field.onChange(value);
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -154,13 +157,14 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
                   <FormLabel>Initial Stock Quantity</FormLabel>
                   <FormControl>
                     <Input
-                      type="number"
-                      min="0"
+                      type="text"
+                      inputMode="numeric"
                       placeholder="Enter quantity"
                       {...field}
+                      value={field.value}
                       onChange={(e) => {
-                        const value = e.target.value === '' ? 0 : Number(e.target.value);
-                        field.onChange(value);
+                        const value = e.target.value.replace(/\D/g, '');
+                        field.onChange(value === '' ? 0 : parseInt(value));
                       }}
                     />
                   </FormControl>
@@ -175,7 +179,7 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
                 <FormItem>
                   <FormLabel>Reorder Point</FormLabel>
                   <FormControl>
-                    <Input
+                    <Input 
                       type="number"
                       min="0"
                       {...field}

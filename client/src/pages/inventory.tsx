@@ -33,15 +33,16 @@ export default function Inventory() {
   );
 
   function getLocationStock(productId: number, locationId: number): number {
-    return inventory?.find(inv => 
+    const inv = inventory?.find(inv => 
       inv.productId === productId && inv.locationId === locationId
-    )?.quantity ?? 0;
+    );
+    return inv ? inv.quantity - (inv.reservedQuantity || 0) : 0;
   }
 
   function getTotalStock(productId: number): number {
     return inventory
       ?.filter(inv => inv.productId === productId)
-      .reduce((sum, inv) => sum + inv.quantity, 0) ?? 0;
+      .reduce((sum, inv) => sum + (inv.quantity - (inv.reservedQuantity || 0)), 0) ?? 0;
   }
 
   function getStockStatus(productId: number) {
@@ -58,6 +59,21 @@ export default function Inventory() {
     } else {
       return <Badge variant="default" className="bg-green-500/10 text-green-500">In Stock</Badge>;
     }
+  }
+
+  function getLocationDetails(productId: number, locationId: number) {
+    const inv = inventory?.find(inv => 
+      inv.productId === productId && inv.locationId === locationId
+    );
+
+    if (!inv) return null;
+
+    return {
+      available: inv.quantity - (inv.reservedQuantity || 0),
+      reserved: inv.reservedQuantity || 0,
+      batch: inv.batchNumber,
+      expiry: inv.expiryDate ? new Date(inv.expiryDate).toLocaleDateString() : null,
+    };
   }
 
   if (productsLoading) {
@@ -124,11 +140,20 @@ export default function Inventory() {
                         <TableCell>{getTotalStock(product.id)}</TableCell>
                         <TableCell>
                           <div className="flex flex-col gap-1">
-                            {locations?.map(location => (
-                              <div key={location.id} className="text-sm">
-                                {location.name}: {getLocationStock(product.id, location.id)}
-                              </div>
-                            ))}
+                            {locations?.map(location => {
+                              const details = getLocationDetails(product.id, location.id);
+                              return (
+                                <div key={location.id} className="text-sm">
+                                  <div>{location.name}:</div>
+                                  <div className="text-muted-foreground text-xs">
+                                    Available: {details?.available || 0}
+                                    {details?.reserved > 0 && ` (${details.reserved} reserved)`}
+                                    {details?.batch && ` - Batch: ${details.batch}`}
+                                    {details?.expiry && ` - Expires: ${details.expiry}`}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </TableCell>
                         <TableCell>{getStockStatus(product.id)}</TableCell>

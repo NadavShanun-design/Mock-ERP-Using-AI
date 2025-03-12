@@ -2,7 +2,7 @@ import { pgTable, text, serial, integer, boolean, timestamp, decimal, json } fro
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Products table - core product information only
+// Products table
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -26,15 +26,19 @@ export const locations = pgTable("locations", {
   name: text("name").notNull(),
   address: text("address").notNull(),
   type: text("type").notNull(),
+  capacity: integer("capacity"),
   isActive: boolean("is_active").notNull().default(true),
 });
 
-// Inventory table - tracks stock levels per location
+// Inventory table with batch tracking
 export const inventory = pgTable("inventory", {
   id: serial("id").primaryKey(),
   productId: integer("product_id").notNull(),
   locationId: integer("location_id").notNull(),
   quantity: integer("quantity").notNull().default(0),
+  batchNumber: text("batch_number"),
+  expiryDate: timestamp("expiry_date"),
+  reservedQuantity: integer("reserved_quantity").notNull().default(0),
   lastUpdated: timestamp("last_updated").defaultNow(),
 });
 
@@ -46,7 +50,9 @@ export const inventoryMovements = pgTable("inventory_movements", {
   toLocationId: integer("to_location_id"),
   quantity: integer("quantity").notNull(),
   type: text("type").notNull(),
+  batchNumber: text("batch_number"),
   reference: text("reference"),
+  reason: text("reason"),
   timestamp: timestamp("timestamp").defaultNow(),
   userId: integer("user_id"),
 });
@@ -62,7 +68,7 @@ export const insertProductSchema = createInsertSchema(products, {
     height: z.number().optional(),
     weight: z.number().optional(),
   }).optional().default({}),
-  quantity: z.number().min(0).optional(), // For initial stock setup
+  quantity: z.number().min(0).optional(),
 }).omit({
   id: true,
   createdAt: true,
@@ -73,7 +79,10 @@ export const insertProductSchema = createInsertSchema(products, {
 export const insertLocationSchema = createInsertSchema(locations);
 
 // Schema for inventory operations
-export const insertInventorySchema = createInsertSchema(inventory).omit({
+export const insertInventorySchema = createInsertSchema(inventory, {
+  quantity: z.number().min(0),
+  reservedQuantity: z.number().min(0).default(0),
+}).omit({
   id: true,
   lastUpdated: true,
 });

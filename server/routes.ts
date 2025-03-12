@@ -19,9 +19,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/locations", async (req, res) => {
-    const location = insertLocationSchema.parse(req.body);
-    const newLocation = await storage.createLocation(location);
-    res.status(201).json(newLocation);
+    try {
+      const location = insertLocationSchema.parse(req.body);
+      const newLocation = await storage.createLocation(location);
+      res.status(201).json(newLocation);
+    } catch (error) {
+      res.status(400).json({
+        message: error instanceof Error ? error.message : "Failed to create location"
+      });
+    }
   });
 
   // Enhanced Product API with inventory tracking
@@ -85,8 +91,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Must specify at least one location" });
       }
 
-      const newMovement = await storage.createInventoryMovement(movement);
+      // Check if source location has enough stock
+      if (movement.fromLocationId) {
+        const sourceInventory = await storage.getInventory(movement.productId, movement.fromLocationId);
+        if (!sourceInventory || sourceInventory.quantity < movement.quantity) {
+          return res.status(400).json({ message: "Insufficient stock at source location" });
+        }
+      }
 
+      const newMovement = await storage.createInventoryMovement(movement);
       res.status(200).json({ message: "Inventory transferred successfully", movement: newMovement });
     } catch (error) {
       console.error("Transfer error:", error);
@@ -94,24 +107,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: error instanceof Error ? error.message : "Failed to transfer inventory" 
       });
     }
-  });
-
-  // Orders API
-  app.get("/api/orders", async (req, res) => {
-    const orders = await storage.getAllOrders();
-    res.json(orders);
-  });
-
-  app.post("/api/orders", async (req, res) => {
-    const order = insertOrderSchema.parse(req.body);
-    const newOrder = await storage.createOrder(order);
-    res.status(201).json(newOrder);
-  });
-
-  app.get("/api/orders/:id", async (req, res) => {
-    const order = await storage.getOrder(parseInt(req.params.id));
-    if (!order) return res.status(404).send("Order not found");
-    res.json(order);
   });
 
   // Dashboard Stats

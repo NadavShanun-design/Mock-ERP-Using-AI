@@ -31,12 +31,13 @@ export class MemStorage {
       checkPeriod: 86400000,
     });
 
-    // Initialize default warehouse location
+    // Initialize default warehouse
     this.createLocation({
       name: "Main Warehouse",
       address: "123 Main St",
       type: "warehouse",
       isActive: true,
+      capacity: 1000,
     });
   }
 
@@ -77,7 +78,8 @@ export class MemStorage {
         await this.createInventory({
           productId: id,
           locationId: defaultLocation.id,
-          quantity: data.quantity
+          quantity: data.quantity,
+          reservedQuantity: 0,
         });
       }
     }
@@ -115,7 +117,10 @@ export class MemStorage {
     const inventory: Inventory = {
       ...data,
       id,
-      lastUpdated: new Date()
+      lastUpdated: new Date(),
+      batchNumber: data.batchNumber || null,
+      expiryDate: data.expiryDate || null,
+      reservedQuantity: data.reservedQuantity || 0,
     };
     this.inventory.set(id, inventory);
     return inventory;
@@ -124,7 +129,11 @@ export class MemStorage {
   async updateInventory(
     productId: number,
     locationId: number,
-    quantity: number
+    quantity: number,
+    options: {
+      batchNumber?: string;
+      expiryDate?: Date;
+    } = {}
   ): Promise<void> {
     const existingInventory = await this.getInventory(productId, locationId);
 
@@ -133,14 +142,18 @@ export class MemStorage {
       const updatedInventory = {
         ...existingInventory,
         quantity: newQuantity,
-        lastUpdated: new Date()
+        lastUpdated: new Date(),
+        ...options,
       };
       this.inventory.set(existingInventory.id, updatedInventory);
     } else if (quantity > 0) {
       await this.createInventory({
         productId,
         locationId,
-        quantity
+        quantity,
+        batchNumber: options.batchNumber,
+        expiryDate: options.expiryDate,
+        reservedQuantity: 0,
       });
     }
   }
@@ -150,7 +163,7 @@ export class MemStorage {
     const movement: InventoryMovement = {
       ...data,
       id,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     // Update inventory levels
@@ -171,13 +184,20 @@ export class MemStorage {
 
     let totalValue = 0;
     const lowStockProducts = new Set<number>();
+    const expiringProducts = new Set<number>();
 
     for (const inv of inventory) {
       const product = this.products.get(inv.productId);
       if (product) {
-        totalValue += Number(product.price) * inv.quantity;
-        if (inv.quantity <= (product.reorderPoint || 10)) {
+        const availableQuantity = inv.quantity - (inv.reservedQuantity || 0);
+        totalValue += Number(product.price) * availableQuantity;
+
+        if (availableQuantity <= (product.reorderPoint || 10)) {
           lowStockProducts.add(product.id);
+        }
+
+        if (inv.expiryDate && new Date(inv.expiryDate) <= new Date()) {
+          expiringProducts.add(product.id);
         }
       }
     }
@@ -185,6 +205,7 @@ export class MemStorage {
     return {
       totalProducts: products.length,
       lowStockProducts: lowStockProducts.size,
+      expiringProducts: expiringProducts.size,
       totalInventoryValue: totalValue,
     };
   }
