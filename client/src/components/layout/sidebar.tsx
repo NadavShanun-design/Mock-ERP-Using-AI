@@ -7,10 +7,12 @@ import {
   ShoppingCart, 
   FileText,
   LogOut,
-  Menu
+  Menu,
+  Brain
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
+import { AiConsultant } from "@/components/inventory/ai-consultant";
 
 interface NavItemProps {
   href: string;
@@ -39,6 +41,7 @@ export default function Sidebar() {
   const [location] = useLocation();
   const { logoutMutation } = useAuth();
   const [open, setOpen] = useState(false);
+  const [showConsultant, setShowConsultant] = useState(false);
 
   const navigation = [
     { href: "/", icon: <LayoutDashboard className="h-5 w-5" />, label: "Dashboard" },
@@ -59,6 +62,14 @@ export default function Sidebar() {
           onClick={() => setOpen(false)}
         />
       ))}
+      <Button
+        variant="ghost"
+        className="w-full justify-start text-purple-500"
+        onClick={() => setShowConsultant(!showConsultant)}
+      >
+        <Brain className="h-5 w-5" />
+        <span className="ml-2">AI Consultant</span>
+      </Button>
       <Button
         variant="ghost"
         className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50"
@@ -82,6 +93,7 @@ export default function Sidebar() {
         <SheetContent side="left" className="w-64">
           <div className="py-4">
             <NavContent />
+            {showConsultant && <AiConsultant />}
           </div>
         </SheetContent>
       </Sheet>
@@ -93,6 +105,7 @@ export default function Sidebar() {
         </div>
         <div className="flex-1 px-4">
           <NavContent />
+          {showConsultant && <AiConsultant />}
         </div>
       </div>
     </>

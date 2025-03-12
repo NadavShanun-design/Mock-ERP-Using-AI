@@ -8,6 +8,7 @@ import {
   insertInventorySchema,
   insertInventoryMovementSchema,
 } from "@shared/schema";
+import OpenAI from "openai";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
@@ -118,6 +119,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/stats", async (req, res) => {
     const stats = await storage.getDashboardStats();
     res.json(stats);
+  });
+
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+
+  app.post("/api/consultant/advice", async (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+      const { query, inventoryContext } = req.body;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          {
+            role: "system",
+            content: `You are an AI inventory management consultant with expertise in:
+- Lean Six Sigma principles
+- Supply chain optimization
+- Inventory forecasting
+- Seasonal trend analysis
+Provide concise, actionable advice for inventory management queries.`
+          },
+          {
+            role: "user",
+            content: `Context: ${JSON.stringify(inventoryContext)}\n\nQuery: ${query}`
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 500
+      });
+
+      res.json({ advice: completion.choices[0].message.content });
+    } catch (error) {
+      console.error("OpenAI API error:", error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : "Failed to get AI advice" 
+      });
+    }
   });
 
   const httpServer = createServer(app);
