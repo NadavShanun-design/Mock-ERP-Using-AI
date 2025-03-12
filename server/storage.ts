@@ -94,7 +94,7 @@ export class MemStorage implements IStorage {
       await this.createProductInventory({
         productId: id,
         locationId: defaultLocation.id,
-        quantity: product.quantity || 0,
+        quantity: parseInt(product.quantity?.toString() || '0'),
         reservedQuantity: 0,
       });
     }

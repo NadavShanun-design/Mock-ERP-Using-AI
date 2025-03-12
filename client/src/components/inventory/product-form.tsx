@@ -28,7 +28,7 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
       sku: "",
       description: "",
       price: "",
-      quantity: 0,
+      quantity: "0", // Changed to string for better input handling
       reorderPoint: 10,
       minimumStock: 5,
       maximumStock: 100,
@@ -41,11 +41,17 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
 
   const createProduct = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/products", data);
+      // Ensure quantity is sent as a number
+      const formattedData = {
+        ...data,
+        quantity: parseInt(data.quantity)
+      };
+      const res = await apiRequest("POST", "/api/products", formattedData);
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       toast({
         title: "Success",
         description: "Product created successfully",
@@ -138,9 +144,15 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
                   <FormLabel>Initial Quantity</FormLabel>
                   <FormControl>
                     <Input 
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       {...field}
-                      onChange={(e) => field.onChange(e.target.value === '' ? 0 : parseInt(e.target.value))}
+                      value={field.value}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        field.onChange(val);
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
