@@ -1,39 +1,30 @@
-import { IStorage } from "./storage";
 import createMemoryStore from "memorystore";
 import session from "express-session";
 import {
-  InsertProduct,
   Product,
-  InsertOrder,
-  Order,
-  User,
-  InsertUser,
+  InsertProduct,
   Location,
   InsertLocation,
-  ProductInventory,
-  InsertProductInventory,
+  Inventory,
+  InsertInventory,
   InventoryMovement,
-  InsertInventoryMovement
+  InsertInventoryMovement,
 } from "@shared/schema";
 
 const MemoryStore = createMemoryStore(session);
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private products: Map<number, Product>;
-  private orders: Map<number, Order>;
-  private locations: Map<number, Location>;
-  private productInventory: Map<number, ProductInventory>;
-  private inventoryMovements: Map<number, InventoryMovement>;
+export class MemStorage {
+  products: Map<number, Product>;
+  locations: Map<number, Location>;
+  inventory: Map<number, Inventory>;
+  inventoryMovements: Map<number, InventoryMovement>;
   sessionStore: session.Store;
   currentId: number;
 
   constructor() {
-    this.users = new Map();
     this.products = new Map();
-    this.orders = new Map();
     this.locations = new Map();
-    this.productInventory = new Map();
+    this.inventory = new Map();
     this.inventoryMovements = new Map();
     this.currentId = 1;
     this.sessionStore = new MemoryStore({
@@ -45,27 +36,10 @@ export class MemStorage implements IStorage {
       name: "Main Warehouse",
       address: "123 Main St",
       type: "warehouse",
-      isActive: true
+      isActive: true,
     });
   }
 
-  // Location Management
-  async getAllLocations(): Promise<Location[]> {
-    return Array.from(this.locations.values());
-  }
-
-  async getLocation(id: number): Promise<Location | undefined> {
-    return this.locations.get(id);
-  }
-
-  async createLocation(location: InsertLocation): Promise<Location> {
-    const id = this.currentId++;
-    const newLocation = { ...location, id };
-    this.locations.set(id, newLocation);
-    return newLocation;
-  }
-
-  // Enhanced Product Management
   async getAllProducts(): Promise<Product[]> {
     return Array.from(this.products.values());
   }
@@ -74,150 +48,144 @@ export class MemStorage implements IStorage {
     return this.products.get(id);
   }
 
-  async createProduct(product: InsertProduct): Promise<Product> {
+  async createProduct(data: InsertProduct): Promise<Product> {
     const id = this.currentId++;
     const now = new Date();
-    const newProduct = {
-      ...product,
+
+    const product: Product = {
+      ...data,
       id,
-      price: product.price.toString(),
-      dimensions: product.dimensions || {},
+      price: typeof data.price === 'string' ? data.price : data.price.toString(),
       createdAt: now,
       updatedAt: now,
-      description: product.description || null
+      description: data.description || null,
+      category: data.category || null,
+      brand: data.brand || null,
+      unit: data.unit || "piece",
+      dimensions: data.dimensions || {},
+      reorderPoint: data.reorderPoint || 10,
+      maximumStock: data.maximumStock || null,
+      minimumStock: data.minimumStock || null,
     };
-    this.products.set(id, newProduct);
 
-    // Initialize inventory in default location with the specified quantity
-    const defaultLocation = Array.from(this.locations.values())[0];
-    if (defaultLocation) {
-      await this.createProductInventory({
-        productId: id,
-        locationId: defaultLocation.id,
-        quantity: parseInt(product.quantity?.toString() || '0'),
-        reservedQuantity: 0,
-      });
+    this.products.set(id, product);
+
+    // Initialize inventory if quantity provided
+    if (typeof data.quantity === 'number' && data.quantity > 0) {
+      const defaultLocation = Array.from(this.locations.values())[0];
+      if (defaultLocation) {
+        await this.createInventory({
+          productId: id,
+          locationId: defaultLocation.id,
+          quantity: data.quantity
+        });
+      }
     }
 
-    return newProduct;
+    return product;
   }
 
-  // Inventory Management
-  async getProductInventory(productId: number, locationId: number): Promise<ProductInventory | undefined> {
-    return Array.from(this.productInventory.values()).find(
+  async getAllLocations(): Promise<Location[]> {
+    return Array.from(this.locations.values());
+  }
+
+  async getLocation(id: number): Promise<Location | undefined> {
+    return this.locations.get(id);
+  }
+
+  async createLocation(data: InsertLocation): Promise<Location> {
+    const id = this.currentId++;
+    const location = { ...data, id };
+    this.locations.set(id, location);
+    return location;
+  }
+
+  async getAllInventory(): Promise<Inventory[]> {
+    return Array.from(this.inventory.values());
+  }
+
+  async getInventory(productId: number, locationId: number): Promise<Inventory | undefined> {
+    return Array.from(this.inventory.values()).find(
       inv => inv.productId === productId && inv.locationId === locationId
     );
   }
 
-  async createProductInventory(inventory: InsertProductInventory): Promise<ProductInventory> {
+  async createInventory(data: InsertInventory): Promise<Inventory> {
     const id = this.currentId++;
-    const newInventory = {
-      ...inventory,
+    const inventory: Inventory = {
+      ...data,
       id,
-      lastUpdated: new Date(),
-      batchNumber: inventory.batchNumber || null,
-      expiryDate: inventory.expiryDate || null
-    };
-    this.productInventory.set(id, newInventory);
-    return newInventory;
-  }
-
-  async updateProductInventory(
-    productId: number,
-    locationId: number,
-    quantity: number,
-    type: string,
-    userId: number
-  ): Promise<void> {
-    const inventory = await this.getProductInventory(productId, locationId);
-    if (!inventory) {
-      throw new Error("Inventory not found");
-    }
-
-    // Create inventory movement record
-    const movement: InsertInventoryMovement = {
-      productId,
-      toLocationId: locationId,
-      quantity,
-      type,
-      userId,
-    };
-    await this.createInventoryMovement(movement);
-
-    // Update inventory
-    const updatedInventory = {
-      ...inventory,
-      quantity: inventory.quantity + quantity,
       lastUpdated: new Date()
     };
-    this.productInventory.set(inventory.id, updatedInventory);
+    this.inventory.set(id, inventory);
+    return inventory;
   }
 
-  async createInventoryMovement(movement: InsertInventoryMovement): Promise<InventoryMovement> {
+  async updateInventory(
+    productId: number,
+    locationId: number,
+    quantity: number
+  ): Promise<void> {
+    const existingInventory = await this.getInventory(productId, locationId);
+
+    if (existingInventory) {
+      const newQuantity = Math.max(0, existingInventory.quantity + quantity);
+      const updatedInventory = {
+        ...existingInventory,
+        quantity: newQuantity,
+        lastUpdated: new Date()
+      };
+      this.inventory.set(existingInventory.id, updatedInventory);
+    } else if (quantity > 0) {
+      await this.createInventory({
+        productId,
+        locationId,
+        quantity
+      });
+    }
+  }
+
+  async createInventoryMovement(data: InsertInventoryMovement): Promise<InventoryMovement> {
     const id = this.currentId++;
-    const newMovement = {
-      ...movement,
+    const movement: InventoryMovement = {
+      ...data,
       id,
-      timestamp: new Date(),
-      reference: movement.reference || null,
-      reason: movement.reason || null,
-      fromLocationId: movement.fromLocationId || null
+      timestamp: new Date()
     };
-    this.inventoryMovements.set(id, newMovement);
-    return newMovement;
-  }
 
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
-  }
+    // Update inventory levels
+    if (data.fromLocationId) {
+      await this.updateInventory(data.productId, data.fromLocationId, -data.quantity);
+    }
+    if (data.toLocationId) {
+      await this.updateInventory(data.productId, data.toLocationId, data.quantity);
+    }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId++;
-    const user = { ...insertUser, id, role: "user" };
-    this.users.set(id, user);
-    return user;
-  }
-
-  async getAllOrders(): Promise<Order[]> {
-    return Array.from(this.orders.values());
-  }
-
-  async getOrder(id: number): Promise<Order | undefined> {
-    return this.orders.get(id);
-  }
-
-  async createOrder(order: InsertOrder): Promise<Order> {
-    const id = this.currentId++;
-    const newOrder = { ...order, id, createdAt: new Date() };
-    this.orders.set(id, newOrder);
-    return newOrder;
+    this.inventoryMovements.set(id, movement);
+    return movement;
   }
 
   async getDashboardStats() {
     const products = await this.getAllProducts();
-    const orders = await this.getAllOrders();
-    const inventory = Array.from(this.productInventory.values());
+    const inventory = await this.getAllInventory();
 
-    const lowStockProducts = inventory.filter(inv => {
+    let totalValue = 0;
+    const lowStockProducts = new Set<number>();
+
+    for (const inv of inventory) {
       const product = this.products.get(inv.productId);
-      return product && inv.quantity <= (product.minimumStock || 10);
-    });
+      if (product) {
+        totalValue += Number(product.price) * inv.quantity;
+        if (inv.quantity <= (product.reorderPoint || 10)) {
+          lowStockProducts.add(product.id);
+        }
+      }
+    }
 
     return {
       totalProducts: products.length,
-      totalOrders: orders.length,
-      lowStockProducts: lowStockProducts.length,
-      totalRevenue: orders.reduce((sum, order) => sum + Number(order.total), 0),
-      inventoryValue: inventory.reduce((sum, inv) => {
-        const product = this.products.get(inv.productId);
-        return sum + (product ? Number(product.price) * inv.quantity : 0);
-      }, 0)
+      lowStockProducts: lowStockProducts.size,
+      totalInventoryValue: totalValue,
     };
   }
 }

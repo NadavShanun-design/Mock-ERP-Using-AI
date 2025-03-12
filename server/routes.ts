@@ -4,10 +4,9 @@ import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import {
   insertProductSchema,
-  insertOrderSchema,
   insertLocationSchema,
+  insertInventorySchema,
   insertInventoryMovementSchema,
-  insertProductInventorySchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -32,9 +31,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/products", async (req, res) => {
-    const product = insertProductSchema.parse(req.body);
-    const newProduct = await storage.createProduct(product);
-    res.status(201).json(newProduct);
+    try {
+      const product = insertProductSchema.parse(req.body);
+      const newProduct = await storage.createProduct(product);
+      res.status(201).json(newProduct);
+    } catch (error) {
+      console.error("Product creation error:", error);
+      res.status(400).json({
+        message: error instanceof Error ? error.message : "Failed to create product"
+      });
+    }
   });
 
   // Inventory Management API
@@ -42,7 +48,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const productId = req.query.productId ? parseInt(req.query.productId as string) : undefined;
     const locationId = req.query.locationId ? parseInt(req.query.locationId as string) : undefined;
 
-    const inventory = Array.from(storage.productInventory.values()).filter(inv => {
+    const inventory = Array.from(storage.inventory.values()).filter(inv => {
       if (productId && inv.productId !== productId) return false;
       if (locationId && inv.locationId !== locationId) return false;
       return true;
@@ -52,9 +58,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/inventory", async (req, res) => {
-    const inventory = insertProductInventorySchema.parse(req.body);
-    const newInventory = await storage.createProductInventory(inventory);
-    res.status(201).json(newInventory);
+    try {
+      const inventory = insertInventorySchema.parse(req.body);
+      const newInventory = await storage.createInventory(inventory);
+      res.status(201).json(newInventory);
+    } catch (error) {
+      res.status(400).json({
+        message: error instanceof Error ? error.message : "Failed to create inventory"
+      });
+    }
   });
 
   app.post("/api/inventory/transfer", async (req, res) => {
@@ -73,29 +85,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Must specify at least one location" });
       }
 
-      // Handle inventory decrease at source location
-      if (movement.fromLocationId) {
-        await storage.updateProductInventory(
-          movement.productId,
-          movement.fromLocationId,
-          -movement.quantity,
-          "transfer_out",
-          req.user.id
-        );
-      }
+      const newMovement = await storage.createInventoryMovement(movement);
 
-      // Handle inventory increase at destination location
-      if (movement.toLocationId) {
-        await storage.updateProductInventory(
-          movement.productId,
-          movement.toLocationId,
-          movement.quantity,
-          "transfer_in",
-          req.user.id
-        );
-      }
-
-      res.status(200).json({ message: "Inventory transferred successfully" });
+      res.status(200).json({ message: "Inventory transferred successfully", movement: newMovement });
     } catch (error) {
       console.error("Transfer error:", error);
       res.status(400).json({ 

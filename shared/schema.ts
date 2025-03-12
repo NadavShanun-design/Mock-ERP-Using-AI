@@ -2,16 +2,7 @@ import { pgTable, text, serial, integer, boolean, timestamp, decimal, json } fro
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Warehouse Locations schema
-export const locations = pgTable("locations", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  address: text("address").notNull(),
-  type: text("type").notNull().default("warehouse"), // warehouse, store, distribution_center
-  isActive: boolean("is_active").notNull().default(true),
-});
-
-// Enhanced Product schema with multi-location support
+// Products table - core product information only
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -20,8 +11,8 @@ export const products = pgTable("products", {
   price: decimal("price").notNull(),
   category: text("category"),
   brand: text("brand"),
-  unit: text("unit").notNull().default("piece"), // piece, kg, liter, etc.
-  dimensions: json("dimensions").notNull().default({}), // {length, width, height, weight}
+  unit: text("unit").notNull().default("piece"),
+  dimensions: json("dimensions").notNull().default({}),
   reorderPoint: integer("reorder_point").notNull().default(10),
   maximumStock: integer("maximum_stock"),
   minimumStock: integer("minimum_stock"),
@@ -29,35 +20,38 @@ export const products = pgTable("products", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Product Inventory by Location
-export const productInventory = pgTable("product_inventory", {
+// Locations table
+export const locations = pgTable("locations", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  address: text("address").notNull(),
+  type: text("type").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+});
+
+// Inventory table - tracks stock levels per location
+export const inventory = pgTable("inventory", {
   id: serial("id").primaryKey(),
   productId: integer("product_id").notNull(),
   locationId: integer("location_id").notNull(),
   quantity: integer("quantity").notNull().default(0),
-  reservedQuantity: integer("reserved_quantity").notNull().default(0),
-  batchNumber: text("batch_number"),
-  expiryDate: timestamp("expiry_date"),
   lastUpdated: timestamp("last_updated").defaultNow(),
 });
 
-// Inventory Movements
+// Inventory Movement History
 export const inventoryMovements = pgTable("inventory_movements", {
   id: serial("id").primaryKey(),
   productId: integer("product_id").notNull(),
   fromLocationId: integer("from_location_id"),
   toLocationId: integer("to_location_id"),
   quantity: integer("quantity").notNull(),
-  type: text("type").notNull(), // transfer, adjustment, receipt, shipment
-  reference: text("reference"), // PO number, SO number, batch number
-  reason: text("reason"),
-  expiryDate: timestamp("expiry_date"),
+  type: text("type").notNull(),
+  reference: text("reference"),
   timestamp: timestamp("timestamp").defaultNow(),
-  userId: integer("user_id").notNull(),
+  userId: integer("user_id"),
 });
 
-// Export the insert schemas
-export const insertLocationSchema = createInsertSchema(locations);
+// Schema for product creation/update
 export const insertProductSchema = createInsertSchema(products, {
   price: z.string().or(z.number()).transform(val =>
     typeof val === 'string' ? parseFloat(val) : val
@@ -68,93 +62,36 @@ export const insertProductSchema = createInsertSchema(products, {
     height: z.number().optional(),
     weight: z.number().optional(),
   }).optional().default({}),
-}).omit({ createdAt: true, updatedAt: true });
-
-export const insertProductInventorySchema = createInsertSchema(productInventory, {
-  quantity: z.number().or(z.string()).transform(val =>
-    typeof val === 'string' ? parseInt(val) : val
-  ),
-}).omit({ lastUpdated: true });
-
-export const insertInventoryMovementSchema = createInsertSchema(inventoryMovements).extend({
-  productId: z.number(),
-  fromLocationId: z.number().optional(),
-  toLocationId: z.number().optional(),
-  quantity: z.number().min(1, "Quantity must be at least 1"),
-  type: z.string(),
-  reference: z.string().optional(),
-  expiryDate: z.string().optional(),
-  userId: z.number().optional() // This will be set by the server
-}).omit({ 
+  quantity: z.number().min(0).optional(), // For initial stock setup
+}).omit({
   id: true,
-  timestamp: true 
+  createdAt: true,
+  updatedAt: true,
 });
 
-// User schema
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  role: text("role").notNull().default("user"),
+// Schema for location operations
+export const insertLocationSchema = createInsertSchema(locations);
+
+// Schema for inventory operations
+export const insertInventorySchema = createInsertSchema(inventory).omit({
+  id: true,
+  lastUpdated: true,
 });
 
-// Product schema (original remains largely unchanged, but the above `products` table is the enhanced version)
-
-
-// Order schema
-export const orders = pgTable("orders", {
-  id: serial("id").primaryKey(),
-  customerId: integer("customer_id").notNull(),
-  status: text("status").notNull().default("pending"),
-  total: decimal("total").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Order items schema
-export const orderItems = pgTable("order_items", {
-  id: serial("id").primaryKey(),
-  orderId: integer("order_id").notNull(),
-  productId: integer("product_id").notNull(),
-  quantity: integer("quantity").notNull(),
-  price: decimal("price").notNull(),
-});
-
-// Schema for inserting users
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-});
-
-// Schema for inserting products (original remains largely unchanged, but the above `insertProductSchema` is the enhanced version)
-
-
-// Schema for inserting orders
-export const insertOrderSchema = createInsertSchema(orders).pick({
-  customerId: true,
-  status: true,
-  total: true,
-});
-
-// Schema for inserting order items
-export const insertOrderItemSchema = createInsertSchema(orderItems).pick({
-  orderId: true,
-  productId: true,
-  quantity: true,
-  price: true,
+// Schema for inventory movements
+export const insertInventoryMovementSchema = createInsertSchema(inventoryMovements).extend({
+  quantity: z.number().min(1, "Quantity must be at least 1"),
+}).omit({
+  id: true,
+  timestamp: true,
 });
 
 // Export types
-export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
-export type Order = typeof orders.$inferSelect;
-export type InsertOrder = z.infer<typeof insertOrderSchema>;
-export type OrderItem = typeof orderItems.$inferSelect;
-export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;
 export type Location = typeof locations.$inferSelect;
 export type InsertLocation = z.infer<typeof insertLocationSchema>;
-export type ProductInventory = typeof productInventory.$inferSelect;
-export type InsertProductInventory = z.infer<typeof insertProductInventorySchema>;
+export type Inventory = typeof inventory.$inferSelect;
+export type InsertInventory = z.infer<typeof insertInventorySchema>;
 export type InventoryMovement = typeof inventoryMovements.$inferSelect;
 export type InsertInventoryMovement = z.infer<typeof insertInventoryMovementSchema>;

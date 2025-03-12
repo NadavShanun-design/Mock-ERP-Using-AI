@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { Loader2 } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Loader2, Package } from "lucide-react";
 
 interface ProductFormProps {
   onSuccess?: () => void;
@@ -19,7 +19,6 @@ interface ProductFormProps {
 export function ProductForm({ onSuccess }: ProductFormProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   const form = useForm({
     resolver: zodResolver(insertProductSchema),
@@ -28,7 +27,7 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
       sku: "",
       description: "",
       price: "",
-      quantity: "0", // Changed to string for better input handling
+      quantity: 0,
       reorderPoint: 10,
       minimumStock: 5,
       maximumStock: 100,
@@ -41,12 +40,18 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
 
   const createProduct = useMutation({
     mutationFn: async (data: any) => {
-      // Ensure quantity is sent as a number
+      // Format data for API
       const formattedData = {
         ...data,
-        quantity: parseInt(data.quantity)
+        quantity: Number(data.quantity) || 0,
+        price: Number(data.price)
       };
+
       const res = await apiRequest("POST", "/api/products", formattedData);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to create product");
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -72,7 +77,10 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>Add Product</Button>
+        <Button>
+          <Package className="h-4 w-4 mr-2" />
+          Add Product
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
@@ -126,10 +134,12 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
                 <FormItem>
                   <FormLabel>Price</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="number" 
-                      step="0.01" 
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
                       {...field}
+                      onChange={(e) => field.onChange(e.target.value)}
                     />
                   </FormControl>
                   <FormMessage />
@@ -141,17 +151,16 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
               name="quantity"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Initial Quantity</FormLabel>
+                  <FormLabel>Initial Stock Quantity</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="Enter quantity"
                       {...field}
-                      value={field.value}
                       onChange={(e) => {
-                        const val = e.target.value.replace(/[^0-9]/g, '');
-                        field.onChange(val);
+                        const value = e.target.value === '' ? 0 : Number(e.target.value);
+                        field.onChange(value);
                       }}
                     />
                   </FormControl>
@@ -166,10 +175,11 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
                 <FormItem>
                   <FormLabel>Reorder Point</FormLabel>
                   <FormControl>
-                    <Input 
+                    <Input
                       type="number"
+                      min="0"
                       {...field}
-                      onChange={(e) => field.onChange(e.target.value === '' ? 0 : parseInt(e.target.value))}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
                     />
                   </FormControl>
                   <FormMessage />

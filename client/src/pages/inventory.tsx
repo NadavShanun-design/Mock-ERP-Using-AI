@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Search } from "lucide-react";
-import { Product, Location, ProductInventory } from "@shared/schema";
+import { Product, Location, Inventory } from "@shared/schema";
 import { ProductForm } from "@/components/inventory/product-form";
 import { LocationManager } from "@/components/inventory/location-manager";
 import { InventoryTransfer } from "@/components/inventory/inventory-transfer";
@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Inventory() {
   const [search, setSearch] = useState("");
+
   const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: ["/api/products"],
   });
@@ -21,7 +22,7 @@ export default function Inventory() {
     queryKey: ["/api/locations"],
   });
 
-  const { data: inventory } = useQuery<ProductInventory[]>({
+  const { data: inventory } = useQuery<Inventory[]>({
     queryKey: ["/api/inventory"],
   });
 
@@ -31,26 +32,29 @@ export default function Inventory() {
     product.description?.toLowerCase().includes(search.toLowerCase())
   );
 
-  function getLocationStock(productId: number, locationId: number) {
+  function getLocationStock(productId: number, locationId: number): number {
     return inventory?.find(inv => 
       inv.productId === productId && inv.locationId === locationId
     )?.quantity ?? 0;
   }
 
-  function getTotalStock(productId: number) {
+  function getTotalStock(productId: number): number {
     return inventory
       ?.filter(inv => inv.productId === productId)
       .reduce((sum, inv) => sum + inv.quantity, 0) ?? 0;
   }
 
-  function getStockStatus(product: Product) {
-    const totalStock = getTotalStock(product.id);
+  function getStockStatus(productId: number) {
+    const product = products?.find(p => p.id === productId);
+    if (!product) return null;
+
+    const totalStock = getTotalStock(productId);
     const reorderPoint = product.reorderPoint || 10;
 
-    if (totalStock <= 0) {
+    if (totalStock === 0) {
       return <Badge variant="destructive">Out of Stock</Badge>;
     } else if (totalStock <= reorderPoint) {
-      return <Badge variant="warning">Low Stock</Badge>;
+      return <Badge variant="default" className="bg-yellow-500/10 text-yellow-500">Low Stock</Badge>;
     } else {
       return <Badge variant="default" className="bg-green-500/10 text-green-500">In Stock</Badge>;
     }
@@ -127,7 +131,7 @@ export default function Inventory() {
                             ))}
                           </div>
                         </TableCell>
-                        <TableCell>{getStockStatus(product)}</TableCell>
+                        <TableCell>{getStockStatus(product.id)}</TableCell>
                         <TableCell>
                           <InventoryTransfer product={product} />
                         </TableCell>
