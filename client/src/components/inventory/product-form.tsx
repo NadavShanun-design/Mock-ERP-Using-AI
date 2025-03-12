@@ -27,7 +27,7 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
       sku: "",
       description: "",
       price: "",
-      quantity: 0,
+      initialQuantity: 0,
       reorderPoint: 10,
       minimumStock: 5,
       maximumStock: 100,
@@ -40,11 +40,13 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
 
   const createProduct = useMutation({
     mutationFn: async (data: any) => {
-      // Format data for API
       const formattedData = {
         ...data,
-        quantity: Math.max(0, Number(data.quantity) || 0), // Ensure non-negative number
-        price: Number(data.price) || 0
+        initialQuantity: Math.max(0, Number(data.initialQuantity) || 0),
+        price: Number(data.price) || 0,
+        reorderPoint: Number(data.reorderPoint) || 10,
+        minimumStock: Number(data.minimumStock) || 5,
+        maximumStock: Number(data.maximumStock) || 100,
       };
 
       const res = await apiRequest("POST", "/api/products", formattedData);
@@ -151,7 +153,7 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
             />
             <FormField
               control={form.control}
-              name="quantity"
+              name="initialQuantity"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Initial Stock Quantity</FormLabel>
@@ -159,7 +161,7 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
                     <Input
                       type="text"
                       inputMode="numeric"
-                      placeholder="Enter quantity"
+                      placeholder="Enter initial quantity"
                       {...field}
                       value={field.value}
                       onChange={(e) => {
@@ -185,32 +187,6 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
                       {...field}
                       onChange={(e) => field.onChange(Number(e.target.value))}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="brand"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Brand</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

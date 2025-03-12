@@ -68,7 +68,7 @@ export const insertProductSchema = createInsertSchema(products, {
     height: z.number().optional(),
     weight: z.number().optional(),
   }).optional().default({}),
-  quantity: z.number().min(0).optional(),
+  initialQuantity: z.number().min(0).optional(), // Used for initial stock setup
 }).omit({
   id: true,
   createdAt: true,

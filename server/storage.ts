@@ -72,13 +72,13 @@ export class MemStorage {
     this.products.set(id, product);
 
     // Initialize inventory if quantity provided
-    if (typeof data.quantity === 'number' && data.quantity > 0) {
+    if (data.initialQuantity && data.initialQuantity > 0) {
       const defaultLocation = Array.from(this.locations.values())[0];
       if (defaultLocation) {
         await this.createInventory({
           productId: id,
           locationId: defaultLocation.id,
-          quantity: data.quantity,
+          quantity: data.initialQuantity,
           reservedQuantity: 0,
         });
       }

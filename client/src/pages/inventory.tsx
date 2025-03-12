@@ -11,7 +11,7 @@ import { LocationManager } from "@/components/inventory/location-manager";
 import { InventoryTransfer } from "@/components/inventory/inventory-transfer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export default function Inventory() {
+export default function InventoryPage() {
   const [search, setSearch] = useState("");
 
   const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
