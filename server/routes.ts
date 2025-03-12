@@ -83,7 +83,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const movement = insertInventoryMovementSchema.parse({
         ...req.body,
-        userId: req.user.id
+        userId: req.user.id,
+        type: "transfer"
       });
 
       // Validate the transfer
@@ -100,7 +101,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const newMovement = await storage.createInventoryMovement(movement);
-      res.status(200).json({ message: "Inventory transferred successfully", movement: newMovement });
+      res.status(200).json({ 
+        message: "Inventory transferred successfully", 
+        movement: newMovement,
+        inventory: await storage.getInventory(movement.productId, movement.fromLocationId || movement.toLocationId!)
+      });
     } catch (error) {
       console.error("Transfer error:", error);
       res.status(400).json({ 

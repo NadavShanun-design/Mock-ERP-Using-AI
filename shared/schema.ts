@@ -2,6 +2,15 @@ import { pgTable, text, serial, integer, boolean, timestamp, decimal, json } fro
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// User table
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+  role: text("role").notNull().default("user"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Products table
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
@@ -57,6 +66,12 @@ export const inventoryMovements = pgTable("inventory_movements", {
   userId: integer("user_id"),
 });
 
+// Schema for user operations
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Schema for product creation/update
 export const insertProductSchema = createInsertSchema(products, {
   price: z.string().or(z.number()).transform(val =>
@@ -76,7 +91,10 @@ export const insertProductSchema = createInsertSchema(products, {
 });
 
 // Schema for location operations
-export const insertLocationSchema = createInsertSchema(locations);
+export const insertLocationSchema = createInsertSchema(locations, {
+  capacity: z.number().optional(),
+  isActive: z.boolean().default(true),
+});
 
 // Schema for inventory operations
 export const insertInventorySchema = createInsertSchema(inventory, {
@@ -96,6 +114,8 @@ export const insertInventoryMovementSchema = createInsertSchema(inventoryMovemen
 });
 
 // Export types
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Location = typeof locations.$inferSelect;

@@ -159,14 +159,13 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
                   <FormLabel>Initial Stock Quantity</FormLabel>
                   <FormControl>
                     <Input
-                      type="text"
-                      inputMode="numeric"
+                      type="number"
+                      min="0"
                       placeholder="Enter initial quantity"
                       {...field}
-                      value={field.value}
                       onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '');
-                        field.onChange(value === '' ? 0 : parseInt(value));
+                        const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                        field.onChange(Math.max(0, value));
                       }}
                     />
                   </FormControl>
@@ -185,7 +184,7 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
                       type="number"
                       min="0"
                       {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
+                      onChange={(e) => field.onChange(Math.max(0, Number(e.target.value)))}
                     />
                   </FormControl>
                   <FormMessage />

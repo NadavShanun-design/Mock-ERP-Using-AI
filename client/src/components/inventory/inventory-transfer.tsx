@@ -52,6 +52,7 @@ export function InventoryTransfer({ onSuccess, product }: TransferFormProps) {
       quantity: 1,
       type: "transfer",
       reference: "",
+      batchNumber: "",
       expiryDate: undefined,
       fromLocationId: undefined,
       toLocationId: undefined,
@@ -188,12 +189,12 @@ export function InventoryTransfer({ onSuccess, product }: TransferFormProps) {
             />
             <FormField
               control={form.control}
-              name="reference"
+              name="batchNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Reference Number (Optional)</FormLabel>
+                  <FormLabel>Batch Number</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Enter reference number" />
+                    <Input {...field} placeholder="Enter batch number" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -204,9 +205,22 @@ export function InventoryTransfer({ onSuccess, product }: TransferFormProps) {
               name="expiryDate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Expiry Date (Optional)</FormLabel>
+                  <FormLabel>Expiry Date</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="reference"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Reference Number (Optional)</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Enter reference number" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

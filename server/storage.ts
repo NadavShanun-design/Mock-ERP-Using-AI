@@ -41,6 +41,7 @@ export class MemStorage {
     });
   }
 
+  // Product Management
   async getAllProducts(): Promise<Product[]> {
     return Array.from(this.products.values());
   }
@@ -71,7 +72,7 @@ export class MemStorage {
 
     this.products.set(id, product);
 
-    // Initialize inventory if quantity provided
+    // Initialize inventory if initial quantity provided
     if (data.initialQuantity && data.initialQuantity > 0) {
       const defaultLocation = Array.from(this.locations.values())[0];
       if (defaultLocation) {
@@ -80,6 +81,8 @@ export class MemStorage {
           locationId: defaultLocation.id,
           quantity: data.initialQuantity,
           reservedQuantity: 0,
+          batchNumber: null,
+          expiryDate: null
         });
       }
     }
@@ -87,6 +90,7 @@ export class MemStorage {
     return product;
   }
 
+  // Location Management
   async getAllLocations(): Promise<Location[]> {
     return Array.from(this.locations.values());
   }
@@ -102,6 +106,7 @@ export class MemStorage {
     return location;
   }
 
+  // Inventory Management
   async getAllInventory(): Promise<Inventory[]> {
     return Array.from(this.inventory.values());
   }
@@ -168,10 +173,14 @@ export class MemStorage {
 
     // Update inventory levels
     if (data.fromLocationId) {
-      await this.updateInventory(data.productId, data.fromLocationId, -data.quantity);
+      await this.updateInventory(data.productId, data.fromLocationId, -data.quantity, {
+        batchNumber: data.batchNumber
+      });
     }
     if (data.toLocationId) {
-      await this.updateInventory(data.productId, data.toLocationId, data.quantity);
+      await this.updateInventory(data.productId, data.toLocationId, data.quantity, {
+        batchNumber: data.batchNumber
+      });
     }
 
     this.inventoryMovements.set(id, movement);
