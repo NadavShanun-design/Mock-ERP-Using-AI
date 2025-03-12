@@ -4,12 +4,13 @@ import Sidebar from "@/components/layout/sidebar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, AlertTriangle, TrendingUp, Package, ArrowDownToLine } from "lucide-react";
 import { Product, Location, Inventory } from "@shared/schema";
 import { ProductForm } from "@/components/inventory/product-form";
 import { LocationManager } from "@/components/inventory/location-manager";
 import { InventoryTransfer } from "@/components/inventory/inventory-transfer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 
 export default function InventoryPage() {
   const [search, setSearch] = useState("");
@@ -24,6 +25,10 @@ export default function InventoryPage() {
 
   const { data: inventory } = useQuery<Inventory[]>({
     queryKey: ["/api/inventory"],
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ["/api/stats"],
   });
 
   const filteredProducts = products?.filter(product => 
@@ -87,16 +92,58 @@ export default function InventoryPage() {
   return (
     <div className="flex h-screen">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto p-8">
+      <main className="flex-1 overflow-y-auto p-8 bg-background">
         <div className="space-y-8">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold">Inventory Management</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Inventory Management</h1>
               <p className="text-muted-foreground">
                 Manage your products and stock levels across locations
               </p>
             </div>
             <ProductForm />
+          </div>
+
+          {/* Stats Overview */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats?.totalProducts || 0}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-yellow-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats?.lowStockProducts || 0}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Inventory Value</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  ${stats?.totalInventoryValue?.toFixed(2) || "0.00"}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Expiring Soon</CardTitle>
+                <ArrowDownToLine className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats?.expiringProducts || 0}</div>
+              </CardContent>
+            </Card>
           </div>
 
           <Tabs defaultValue="products" className="space-y-4">
@@ -116,7 +163,7 @@ export default function InventoryPage() {
                 />
               </div>
 
-              <div className="rounded-md border">
+              <div className="rounded-md border bg-card">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -144,7 +191,7 @@ export default function InventoryPage() {
                               const details = getLocationDetails(product.id, location.id);
                               return (
                                 <div key={location.id} className="text-sm">
-                                  <div>{location.name}:</div>
+                                  <div className="font-medium">{location.name}:</div>
                                   <div className="text-muted-foreground text-xs">
                                     Available: {details?.available || 0}
                                     {details?.reserved > 0 && ` (${details.reserved} reserved)`}
