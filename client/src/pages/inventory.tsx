@@ -11,6 +11,7 @@ import { LocationManager } from "@/components/inventory/location-manager";
 import { InventoryTransfer } from "@/components/inventory/inventory-transfer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { InventoryInsights } from "@/components/inventory/inventory-insights";
 
 export default function InventoryPage() {
   const [search, setSearch] = useState("");
@@ -31,14 +32,14 @@ export default function InventoryPage() {
     queryKey: ["/api/stats"],
   });
 
-  const filteredProducts = products?.filter(product => 
+  const filteredProducts = products?.filter(product =>
     product.name.toLowerCase().includes(search.toLowerCase()) ||
     product.sku.toLowerCase().includes(search.toLowerCase()) ||
     product.description?.toLowerCase().includes(search.toLowerCase())
   );
 
   function getLocationStock(productId: number, locationId: number): number {
-    const inv = inventory?.find(inv => 
+    const inv = inventory?.find(inv =>
       inv.productId === productId && inv.locationId === locationId
     );
     return inv ? inv.quantity - (inv.reservedQuantity || 0) : 0;
@@ -67,7 +68,7 @@ export default function InventoryPage() {
   }
 
   function getLocationDetails(productId: number, locationId: number) {
-    const inv = inventory?.find(inv => 
+    const inv = inventory?.find(inv =>
       inv.productId === productId && inv.locationId === locationId
     );
 
@@ -98,7 +99,7 @@ export default function InventoryPage() {
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Inventory Management</h1>
               <p className="text-muted-foreground">
-                Manage your products and stock levels across locations
+                AI-powered inventory management and insights
               </p>
             </div>
             <ProductForm />
@@ -146,6 +147,9 @@ export default function InventoryPage() {
             </Card>
           </div>
 
+          {/* New AI Insights Section */}
+          <InventoryInsights />
+
           <Tabs defaultValue="products" className="space-y-4">
             <TabsList>
               <TabsTrigger value="products">Products</TabsTrigger>
@@ -155,8 +159,8 @@ export default function InventoryPage() {
             <TabsContent value="products" className="space-y-4">
               <div className="flex items-center space-x-2">
                 <Search className="h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search products..." 
+                <Input
+                  placeholder="Search products..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="max-w-sm"
