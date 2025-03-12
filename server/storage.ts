@@ -9,6 +9,8 @@ import {
   InsertInventory,
   InventoryMovement,
   InsertInventoryMovement,
+  User,
+  InsertUser,
 } from "@shared/schema";
 
 const MemoryStore = createMemoryStore(session);
@@ -18,6 +20,7 @@ export class MemStorage {
   locations: Map<number, Location>;
   inventory: Map<number, Inventory>;
   inventoryMovements: Map<number, InventoryMovement>;
+  users: Map<number, User>;
   sessionStore: session.Store;
   currentId: number;
 
@@ -26,6 +29,7 @@ export class MemStorage {
     this.locations = new Map();
     this.inventory = new Map();
     this.inventoryMovements = new Map();
+    this.users = new Map();
     this.currentId = 1;
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
@@ -39,6 +43,28 @@ export class MemStorage {
       isActive: true,
       capacity: 1000,
     });
+  }
+
+  // User Management
+  async getUser(id: number): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.username === username
+    );
+  }
+
+  async createUser(data: InsertUser): Promise<User> {
+    const id = this.currentId++;
+    const user: User = {
+      ...data,
+      id,
+      createdAt: new Date(),
+    };
+    this.users.set(id, user);
+    return user;
   }
 
   // Product Management
