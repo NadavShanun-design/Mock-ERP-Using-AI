@@ -18,7 +18,7 @@ export function InventoryInsights() {
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-bold">AI-Powered Insights</h2>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -28,7 +28,7 @@ export function InventoryInsights() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {stats?.inventoryTurnover?.toFixed(2) || "0.00"}
+              {stats?.inventoryTurnover?.toFixed(2) || "0.00"}x
             </div>
             <p className="text-xs text-muted-foreground">
               Times inventory is sold and replaced over a period
@@ -58,14 +58,23 @@ export function InventoryInsights() {
           </CardHeader>
           <CardContent>
             <ul className="text-sm space-y-2">
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-500" />
-                Optimize stock levels for seasonal demand
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-yellow-500" />
-                Consider restocking high-turnover items
-              </li>
+              {stats?.seasonalTrends?.recommendations?.map((rec, idx) => (
+                <li key={idx} className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${idx === 0 ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                  {rec.message}
+                </li>
+              )) || (
+                <>
+                  <li className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-500" />
+                    Optimize stock levels for seasonal demand
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                    Consider restocking high-turnover items
+                  </li>
+                </>
+              )}
             </ul>
           </CardContent>
         </Card>
@@ -77,8 +86,20 @@ export function InventoryInsights() {
           </CardHeader>
           <CardContent>
             <div className="text-sm space-y-2">
-              <p>🎄 Holiday season approaching</p>
-              <p>📦 Prepare inventory for Q4 surge</p>
+              {stats?.seasonalTrends?.trends?.map((trend, idx) => (
+                <p key={idx}>
+                  {trend.message}
+                  <br />
+                  <span className="text-xs text-muted-foreground">
+                    {trend.adjustment}
+                  </span>
+                </p>
+              )) || (
+                <>
+                  <p>🎄 Holiday season approaching</p>
+                  <p>📦 Prepare inventory for Q4 surge</p>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>

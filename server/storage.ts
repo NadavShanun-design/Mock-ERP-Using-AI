@@ -213,6 +213,100 @@ export class MemStorage {
     return movement;
   }
 
+  private calculateInventoryTurnover(): number {
+    const inventory = Array.from(this.inventory.values());
+    const products = Array.from(this.products.values());
+
+    if (inventory.length === 0 || products.length === 0) return 0;
+
+    // Calculate average inventory value
+    const averageInventoryValue = inventory.reduce((sum, inv) => {
+      const product = this.products.get(inv.productId);
+      if (!product) return sum;
+      return sum + (parseFloat(product.price.toString()) * inv.quantity);
+    }, 0) / 2;
+
+    // For demo purposes, assume cost of goods sold is 70% of inventory value
+    const costOfGoodsSold = averageInventoryValue * 0.7;
+
+    return averageInventoryValue === 0 ? 0 : Number((costOfGoodsSold / averageInventoryValue).toFixed(2));
+  }
+
+  private calculateStockoutRisk(): number {
+    const inventory = Array.from(this.inventory.values());
+    const products = Array.from(this.products.values());
+
+    if (inventory.length === 0) return 0;
+
+    let totalRisk = 0;
+    let itemsWithRisk = 0;
+
+    for (const product of products) {
+      const productInventory = inventory.filter(inv => inv.productId === product.id);
+      const totalStock = productInventory.reduce((sum, inv) => sum + inv.quantity, 0);
+      const reorderPoint = product.reorderPoint || 10;
+
+      if (totalStock <= reorderPoint) {
+        // Calculate risk based on current stock level vs reorder point
+        const risk = ((reorderPoint - totalStock) / reorderPoint) * 100;
+        totalRisk += risk;
+        itemsWithRisk++;
+      }
+    }
+
+    return itemsWithRisk === 0 ? 0 : Number((totalRisk / itemsWithRisk).toFixed(1));
+  }
+
+  private analyzeSeasonalTrends(): any {
+    const currentDate = new Date();
+    const month = currentDate.getMonth();
+
+    // Define seasonal periods and their impact factors
+    const seasonalPeriods = {
+      holiday: {
+        months: [10, 11], // November, December
+        demand: 1.5,
+        message: "🎄 Prepare for holiday season surge"
+      },
+      summer: {
+        months: [5, 6, 7], // June, July, August
+        demand: 1.2,
+        message: "☀️ Summer season approaching"
+      },
+      backToSchool: {
+        months: [7, 8], // August, September
+        demand: 1.3,
+        message: "📚 Back to school season"
+      },
+      spring: {
+        months: [2, 3, 4], // March, April, May
+        demand: 1.1,
+        message: "🌸 Spring season preparation"
+      }
+    };
+
+    // Get current and upcoming seasonal trends
+    const trends = [];
+    for (const [season, data] of Object.entries(seasonalPeriods)) {
+      if (data.months.includes(month) || data.months.includes((month + 1) % 12)) {
+        trends.push({
+          season,
+          impact: data.demand,
+          message: data.message,
+          timeframe: data.months.includes(month) ? "current" : "upcoming"
+        });
+      }
+    }
+
+    return {
+      trends,
+      recommendations: trends.map(t => ({
+        message: t.message,
+        adjustment: `Adjust inventory levels by ${((t.impact - 1) * 100).toFixed(0)}%`
+      }))
+    };
+  }
+
   async getDashboardStats() {
     const products = await this.getAllProducts();
     const inventory = await this.getAllInventory();
@@ -229,7 +323,7 @@ export class MemStorage {
       totalQuantity: number;
       hasExpired: boolean;
       isLowStock: boolean;
-      value: number;
+      value: number
     }>();
 
     // Process all inventory records
@@ -280,26 +374,11 @@ export class MemStorage {
       lowStockProducts,
       expiringProducts,
       totalInventoryValue: Number(totalValue.toFixed(2)),
-      // Add new KPIs
+      // Advanced analytics
       inventoryTurnover: this.calculateInventoryTurnover(),
       stockoutRisk: this.calculateStockoutRisk(),
       seasonalTrends: this.analyzeSeasonalTrends(),
     };
-  }
-
-  private calculateInventoryTurnover(): number {
-    // Implementation of inventory turnover calculation
-    return 0;
-  }
-
-  private calculateStockoutRisk(): number {
-    // Implementation of stockout risk calculation
-    return 0;
-  }
-
-  private analyzeSeasonalTrends(): any {
-    // Implementation of seasonal trends analysis
-    return {};
   }
 }
 
