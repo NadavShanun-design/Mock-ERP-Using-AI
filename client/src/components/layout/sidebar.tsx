@@ -7,7 +7,8 @@ import {
   ShoppingCart, 
   FileText,
   LogOut,
-  Menu
+  Menu,
+  Brain
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
@@ -44,7 +45,8 @@ export default function Sidebar() {
     { href: "/", icon: <LayoutDashboard className="h-5 w-5" />, label: "Dashboard" },
     { href: "/inventory", icon: <Package className="h-5 w-5" />, label: "Inventory" },
     { href: "/sales", icon: <ShoppingCart className="h-5 w-5" />, label: "Sales" },
-    { href: "/orders", icon: <FileText className="h-5 w-5" />, label: "Orders" }
+    { href: "/orders", icon: <FileText className="h-5 w-5" />, label: "Orders" },
+    { href: "/consultant", icon: <Brain className="h-5 w-5" />, label: "AI Consultant" }
   ];
 
   const NavContent = () => (
