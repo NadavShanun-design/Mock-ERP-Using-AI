@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Brain, Loader2, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -11,12 +10,14 @@ import Sidebar from "@/components/layout/sidebar";
 
 export default function ConsultantPage() {
   const [query, setQuery] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  // Get inventory stats for context
   const { data: stats } = useQuery({
     queryKey: ["/api/stats"],
   });
 
+  // Handle AI consultation
   const consultMutation = useMutation({
     mutationFn: async (question: string) => {
       const res = await apiRequest("POST", "/api/consultant/advice", {
@@ -30,10 +31,9 @@ export default function ConsultantPage() {
       return res.json();
     },
     onSuccess: (data) => {
-      setDialogOpen(true);
       toast({
-        title: "AI Consultant Response",
-        description: "New advice received",
+        title: "Success",
+        description: "Received AI recommendations",
       });
     },
     onError: (error: Error) => {
@@ -66,7 +66,7 @@ export default function ConsultantPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <Textarea
-                placeholder="Ask about inventory optimization, seasonal trends, stock management, or any other inventory-related questions..."
+                placeholder="Ask about inventory optimization, seasonal trends, or any other inventory-related questions..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className="min-h-[200px]"
@@ -86,18 +86,18 @@ export default function ConsultantPage() {
             </CardContent>
           </Card>
 
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>AI Recommendations</DialogTitle>
-              </DialogHeader>
-              <div className="prose prose-sm max-w-none">
+          {consultMutation.data && (
+            <Card>
+              <CardHeader>
+                <CardTitle>AI Recommendations</CardTitle>
+              </CardHeader>
+              <CardContent>
                 <div className="whitespace-pre-wrap">
-                  {consultMutation.data?.advice}
+                  {consultMutation.data.advice}
                 </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </main>
     </div>
