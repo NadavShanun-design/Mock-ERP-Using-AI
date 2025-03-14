@@ -13,6 +13,24 @@ import {
   InsertUser,
 } from "@shared/schema";
 
+interface Order {
+  id: number;
+  status: string;
+  items: Array<{
+    productId: number;
+    quantity: number;
+  }>;
+  createdAt: Date;
+}
+
+interface InsertOrder {
+  status: string;
+  items: Array<{
+    productId: number;
+    quantity: number;
+  }>;
+}
+
 const MemoryStore = createMemoryStore(session);
 
 export class MemStorage {
@@ -21,6 +39,7 @@ export class MemStorage {
   inventory: Map<number, Inventory>;
   inventoryMovements: Map<number, InventoryMovement>;
   users: Map<number, User>;
+  orders: Map<number, Order>;
   sessionStore: session.Store;
   currentId: number;
 
@@ -30,6 +49,7 @@ export class MemStorage {
     this.inventory = new Map();
     this.inventoryMovements = new Map();
     this.users = new Map();
+    this.orders = new Map();
     this.currentId = 1;
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
@@ -379,6 +399,22 @@ export class MemStorage {
       stockoutRisk: this.calculateStockoutRisk(),
       seasonalTrends: this.analyzeSeasonalTrends(),
     };
+  }
+
+  // Add order management methods
+  async getAllOrders(): Promise<Order[]> {
+    return Array.from(this.orders.values());
+  }
+
+  async createOrder(data: InsertOrder): Promise<Order> {
+    const id = this.currentId++;
+    const order: Order = {
+      ...data,
+      id,
+      createdAt: new Date()
+    };
+    this.orders.set(id, order);
+    return order;
   }
 }
 
