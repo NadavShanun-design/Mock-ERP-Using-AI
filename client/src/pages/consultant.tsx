@@ -12,7 +12,7 @@ export default function ConsultantPage() {
   const [query, setQuery] = useState("");
   const { toast } = useToast();
 
-  // Get inventory stats for context
+  // Get data for context
   const { data: stats } = useQuery({
     queryKey: ["/api/stats"],
   });
@@ -21,8 +21,7 @@ export default function ConsultantPage() {
   const consultMutation = useMutation({
     mutationFn: async (question: string) => {
       const res = await apiRequest("POST", "/api/consultant/advice", {
-        query: question,
-        inventoryContext: stats
+        query: question
       });
       if (!res.ok) {
         const error = await res.json();
@@ -30,11 +29,13 @@ export default function ConsultantPage() {
       }
       return res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast({
         title: "Success",
         description: "Received AI recommendations",
       });
+      // Clear the input after successful submission
+      setQuery("");
     },
     onError: (error: Error) => {
       toast({
@@ -61,15 +62,17 @@ export default function ConsultantPage() {
             <CardHeader>
               <CardTitle>Ask for Advice</CardTitle>
               <CardDescription>
-                Ask about inventory optimization, seasonal trends, or stock management strategies
+                Ask about inventory optimization, seasonal trends, stock management, 
+                order fulfillment, or any other business operations questions
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <Textarea
-                placeholder="Ask about inventory optimization, seasonal trends, or any other inventory-related questions..."
+                placeholder="Example: How can I optimize my inventory levels across different locations? 
+                  What seasonal trends should I prepare for?"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="min-h-[200px]"
+                className="min-h-[150px]"
               />
               <Button 
                 className="w-full"
@@ -89,11 +92,16 @@ export default function ConsultantPage() {
           {consultMutation.data && (
             <Card>
               <CardHeader>
-                <CardTitle>AI Recommendations</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Brain className="h-5 w-5 text-primary" />
+                  AI Recommendations
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="whitespace-pre-wrap">
-                  {consultMutation.data.advice}
+                <div className="prose prose-sm max-w-none">
+                  <div className="whitespace-pre-wrap">
+                    {consultMutation.data.advice}
+                  </div>
                 </div>
               </CardContent>
             </Card>

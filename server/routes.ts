@@ -131,7 +131,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const { query, inventoryContext } = req.body;
+      const { query } = req.body;
+
+      // Gather comprehensive business context
+      const stats = await storage.getDashboardStats();
+      const orders = await storage.getAllOrders();
+      const locations = await storage.getAllLocations();
+      const inventory = Array.from(storage.inventory.values());
+
+      const businessContext = {
+        stats,
+        locations: locations.map(loc => ({
+          name: loc.name,
+          type: loc.type,
+          capacity: loc.capacity
+        })),
+        inventoryStatus: inventory.map(inv => ({
+          quantity: inv.quantity,
+          location: locations.find(l => l.id === inv.locationId)?.name,
+          reserved: inv.reservedQuantity
+        })),
+        recentOrders: orders?.slice(0, 5).map(order => ({
+          status: order.status,
+          items: order.items,
+          created: order.createdAt
+        }))
+      };
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4",
@@ -143,15 +168,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 - Supply chain optimization
 - Inventory forecasting
 - Seasonal trend analysis
-Provide concise, actionable advice for inventory management queries.`
+- Multi-location inventory management
+- Order fulfillment optimization
+
+Analyze the business context and provide specific, actionable advice tailored to their current situation.
+Include specific metrics and references to their data when relevant.`
           },
           {
             role: "user",
-            content: `Context: ${JSON.stringify(inventoryContext)}\n\nQuery: ${query}`
+            content: `Business Context: ${JSON.stringify(businessContext)}\n\nUser Query: ${query}`
           }
         ],
         temperature: 0.7,
-        max_tokens: 500
+        max_tokens: 1000
       });
 
       res.json({ advice: completion.choices[0].message.content });
