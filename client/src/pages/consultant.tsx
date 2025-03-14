@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Brain, Loader2, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -57,6 +58,9 @@ export default function ConsultantPage() {
           <Card>
             <CardHeader>
               <CardTitle>Ask for Advice</CardTitle>
+              <DialogDescription>
+                Ask about inventory optimization, trends, or any inventory-related questions
+              </DialogDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <Textarea
@@ -81,18 +85,18 @@ export default function ConsultantPage() {
           </Card>
 
           {consultMutation.data && (
-            <Card>
-              <CardHeader>
-                <CardTitle>AI Recommendations</CardTitle>
-              </CardHeader>
-              <CardContent>
+            <Dialog>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>AI Recommendations</DialogTitle>
+                </DialogHeader>
                 <div className="prose prose-sm max-w-none">
                   <div className="whitespace-pre-wrap">
                     {consultMutation.data.advice}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </DialogContent>
+            </Dialog>
           )}
         </div>
       </main>
