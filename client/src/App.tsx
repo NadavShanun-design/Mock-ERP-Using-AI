@@ -9,6 +9,7 @@ import Dashboard from "@/pages/dashboard";
 import Inventory from "@/pages/inventory";
 import Sales from "@/pages/sales";
 import Orders from "@/pages/orders";
+import Consultant from "@/pages/consultant";
 import { ProtectedRoute } from "./lib/protected-route";
 
 function Router() {
@@ -19,6 +20,7 @@ function Router() {
       <ProtectedRoute path="/inventory" component={Inventory} />
       <ProtectedRoute path="/sales" component={Sales} />
       <ProtectedRoute path="/orders" component={Orders} />
+      <ProtectedRoute path="/consultant" component={Consultant} />
       <Route component={NotFound} />
     </Switch>
   );
